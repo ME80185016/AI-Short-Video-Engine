@@ -4,11 +4,12 @@ from typing import Optional
 
 from api.schemas import TaskCreate
 from services.video import VideoGenerator
+from utils.config import config
 from utils.log import logger
 
 
 async def url2video(task_create: TaskCreate, doc_id: Optional[int] = None) -> Optional[str]:
-    generator = VideoGenerator()
+    generator = VideoGenerator(config)
     return await generator.generate_video(task_create, doc_id)
 
 

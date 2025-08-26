@@ -34,7 +34,7 @@ class ProcessingFiles:
 
 
 class VideoGenerator:
-    def __init__(self):
+    def __init__(self, config):
         self.config = config
         self.assistant = LLmWriter(config.llm.api_key, config.llm.base_url, config.llm.model)
 
@@ -202,19 +202,34 @@ class VideoGenerator:
             content = await self.assistant.writer(
                 str(content_list), self.config.material.prompt, response_format={"type": "json_object"}
             )
-            json_match = re.search(r"(\[.*\s?\])", content, re.DOTALL)
+            
+            # 打印原始响应用于调试
+            logger.debug(f"Raw LLM response: {content}")
+            
+            # 尝试解析完整的JSON对象格式 {"count": N, "dialogues": [...]}
+            json_match = re.search(r"(\{.*\})", content, re.DOTALL)
             if not json_match:
-                logger.warning("No valid JSON found in search terms response")
+                logger.warning("No valid JSON object found in search terms response")
                 continue
-            results = json.loads(json_match.group(1))
-            if len(results) != len(content_list):
-                logger.warning("Number of search terms does not match number of dialogues")
-                continue
+            
             try:
+                response_data = json.loads(json_match.group(1))
+                logger.debug(f"Parsed response data: {response_data}")
+                
+                # 检查是否包含必需的字段
+                if "dialogues" not in response_data:
+                    logger.warning("Response missing 'dialogues' field")
+                    continue
+                
+                results = response_data["dialogues"]
+                if len(results) != len(content_list):
+                    logger.warning(f"Number of search terms ({len(results)}) does not match number of dialogues ({len(content_list)})")
+                    continue
+                
                 search_terms = [result["search_terms"] for result in results]
                 break
-            except KeyError:
-                logger.warning("Invalid search terms response")
+            except (json.JSONDecodeError, KeyError) as e:
+                logger.warning(f"Invalid search terms response: {str(e)}")
                 continue
         else:
             raise ValueError("Number of search terms does not match number of dialogues")

@@ -19,6 +19,14 @@ class QwenTextToSpeechConverter(TextToSpeechConverter):
             text=content,
             voice=voice,
         )
+        
+        # 检查响应是否有效
+        if not response or not hasattr(response, 'output') or not response.output:
+            raise ValueError(f"Invalid TTS response: {response}")
+        
+        if not hasattr(response.output, 'audio') or not response.output.audio:
+            raise ValueError(f"No audio data in response: {response.output}")
+        
         audio_url = response.output.audio["url"]
 
         response = requests.get(audio_url)
