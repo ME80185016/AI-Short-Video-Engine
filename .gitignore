@@ -158,3 +158,4 @@ output/
 cache_videos/
 models/
 *.db
+.DS_Store
